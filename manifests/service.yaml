@@ -10,6 +10,6 @@ spec:
     app.kubernetes.io/name: gke-cred-audit
   ports:
     - name: http
-      port: 8787
-      targetPort: 8787
+      port: 8080
+      targetPort: 8080
       protocol: TCP

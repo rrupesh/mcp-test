@@ -42,7 +42,14 @@ def main() -> None:
         cfg.bind, cfg.port, cfg.enable_secret_listing, cfg.raw_reveal,
     )
     app = create_app(cfg)
-    uvicorn.run(app, host=cfg.bind, port=cfg.port, log_level=args.log_level)
+    uvicorn.run(
+        app,
+        host=cfg.bind,
+        port=cfg.port,
+        log_level=args.log_level,
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+    )
 
 
 if __name__ == "__main__":

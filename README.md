@@ -25,6 +25,14 @@ debugging individual tokens; it never extends to namespace Secret values.
 Natoma is the auth boundary for `/mcp`. The server itself has no native auth; this is intentional
 and surfaced in `/version`, `audit://server-info`, and the OpenAPI spec via `x-auth=none (gateway-managed)`.
 
+### Dockerfile path (recommended)
+
+This repo has a root `Dockerfile`. Point Natoma at this repo and it will build and run the
+container. The server reads `$PORT` (default `8080`) and binds `0.0.0.0`. uvicorn is configured
+with `--proxy-headers --forwarded-allow-ips="*"` so X-Forwarded-* from the gateway is honored.
+
+### Direct cluster deployment
+
 ```
 kubectl apply -f manifests/rbac.yaml
 kubectl apply -f manifests/deployment.yaml
@@ -32,7 +40,7 @@ kubectl apply -f manifests/service.yaml
 kubectl apply -f manifests/networkpolicy.yaml
 ```
 
-Then point Natoma's gateway at `http://gke-cred-audit.<namespace>.svc:8787/mcp`.
+Then point Natoma's gateway at `http://gke-cred-audit.<namespace>.svc:8080/mcp`.
 
 The bundled `NetworkPolicy` only permits ingress from namespaces labeled `natoma-gateway: "true"`;
 adjust to match your installation. Egress is restricted to the Kubernetes API server and the GCE
@@ -56,15 +64,15 @@ target. Default is OFF. When enabling, prefer:
 
 ```
 pip install -e '.[dev]'
-gke-cred-audit --bind 127.0.0.1 --port 8787
+gke-cred-audit --bind 127.0.0.1 --port 8080
 ```
 
 Then:
 
-- `curl http://127.0.0.1:8787/openapi.json` -- OpenAPI 3.1 document
-- `curl http://127.0.0.1:8787/findings?severity=HIGH` -- JSON findings
-- `curl http://127.0.0.1:8787/server-info` -- capability manifest
-- MCP clients connect to `http://127.0.0.1:8787/mcp`
+- `curl http://127.0.0.1:8080/openapi.json` -- OpenAPI 3.1 document
+- `curl http://127.0.0.1:8080/findings?severity=HIGH` -- JSON findings
+- `curl http://127.0.0.1:8080/server-info` -- capability manifest
+- MCP clients connect to `http://127.0.0.1:8080/mcp`
 
 ## What's intentionally NOT in scope
 

@@ -24,7 +24,7 @@ def build_openapi(app: FastAPI) -> dict[str, Any]:
         license_info={"name": "Apache-2.0"},
     )
     schema["openapi"] = "3.1.0"
-    schema.setdefault("servers", [{"url": "http://gke-cred-audit:8787"}])
+    schema.setdefault("servers", [{"url": "http://gke-cred-audit:8080"}])
     schema["x-deployment"] = "natoma"
     schema["x-auth"] = "none (gateway-managed)"
     schema.setdefault("tags", [

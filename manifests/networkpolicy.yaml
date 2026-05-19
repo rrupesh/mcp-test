@@ -18,7 +18,7 @@ spec:
             matchLabels:
               natoma-gateway: "true"
       ports:
-        - port: 8787
+        - port: 8080
           protocol: TCP
   egress:
     - to:

@@ -24,23 +24,26 @@ spec:
       containers:
         - name: audit
           image: ghcr.io/your-org/gke-cred-audit:0.1.0
-          args: ["--bind", "0.0.0.0", "--port", "8787"]
           env:
+            - name: AUDIT_BIND
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
             - name: AUDIT_RAW_REVEAL
               value: "false"
             - name: AUDIT_ENABLE_SECRET_LISTING
               value: "false"
           ports:
-            - containerPort: 8787
+            - containerPort: 8080
               name: audit
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 8787
+              port: 8080
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8787
+              port: 8080
           resources:
             requests: { cpu: "20m", memory: "96Mi" }
             limits:   { cpu: "200m", memory: "256Mi" }

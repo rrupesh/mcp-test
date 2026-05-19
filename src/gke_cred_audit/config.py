@@ -8,7 +8,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Config:
     bind: str = "0.0.0.0"
-    port: int = 8787
+    port: int = 8080
 
     # GCE metadata
     metadata_host: str = "http://169.254.169.254"
@@ -41,7 +41,8 @@ class Config:
 
         return Config(
             bind=os.getenv("AUDIT_BIND", "0.0.0.0"),
-            port=int(os.getenv("AUDIT_PORT", "8787")),
+            # Natoma sets $PORT; fall back to AUDIT_PORT, then 8080.
+            port=int(os.getenv("PORT") or os.getenv("AUDIT_PORT") or "8080"),
             metadata_host=os.getenv("AUDIT_MDS_HOST", "http://169.254.169.254"),
             metadata_timeout_seconds=float(os.getenv("AUDIT_MDS_TIMEOUT", "1.5")),
             identity_audience=os.getenv("AUDIT_IDENTITY_AUDIENCE"),

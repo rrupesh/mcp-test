@@ -1164,7 +1164,7 @@ components:
       - type
       title: ValidationError
 servers:
-- url: http://gke-cred-audit:8787
+- url: http://gke-cred-audit:8080
 x-deployment: natoma
 x-auth: none (gateway-managed)
 tags:
