@@ -1,0 +1,1180 @@
+openapi: 3.1.0
+info:
+  title: gke-cred-audit
+  summary: Defensive credential-exposure auditor for GKE pods.
+  description: Read-only API for inventorying credentials and RBAC the local pod (or,
+    in DaemonSet mode, the local node) is exposed to. Tokens are redacted by default;
+    the response schemas only carry claims, scopes, expiries, and SHA-256 prefixes.
+  contact:
+    name: Security Platform
+  license:
+    name: Apache-2.0
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      tags:
+      - health
+      summary: Liveness probe
+      operationId: healthz_healthz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Healthz Healthz Get
+  /readyz:
+    get:
+      tags:
+      - health
+      summary: Readiness probe
+      operationId: readyz_readyz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Readyz Readyz Get
+  /version:
+    get:
+      tags:
+      - health
+      summary: Build info and runtime mode
+      operationId: version_version_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Version Version Get
+  /server-info:
+    get:
+      tags:
+      - health
+      summary: Server capability manifest (mirror of audit://server-info MCP resource)
+      operationId: server_info_server_info_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerInfo'
+  /report:
+    get:
+      tags:
+      - report
+      summary: Full audit report
+      operationId: report_report_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /credentials:
+    get:
+      tags:
+      - report
+      summary: Credential inventory only (redacted)
+      operationId: credentials_credentials_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialInventory'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /rbac:
+    get:
+      tags:
+      - report
+      summary: RBAC posture (SSRR + SSAR)
+      operationId: rbac_rbac_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacReport'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /findings:
+    get:
+      tags:
+      - findings
+      summary: Severity-tagged findings
+      operationId: findings_findings_get
+      parameters:
+      - name: severity
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Severity'
+          - type: 'null'
+          title: Severity
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingList'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /metadata/{path}:
+    get:
+      tags:
+      - metadata
+      summary: Read a GCE metadata path (auto-redacted)
+      operationId: metadata_metadata__path__get
+      parameters:
+      - name: path
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Path
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataValue'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /namespace:
+    get:
+      tags:
+      - namespace
+      summary: Namespace posture (pods + configmaps + secret-meta when enabled)
+      operationId: namespace_namespace_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamespacePosture'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /namespace/pods:
+    get:
+      tags:
+      - namespace
+      summary: Pods in this pod's namespace
+      operationId: namespace_pods_namespace_pods_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PodPosture'
+                type: array
+                title: Response Namespace Pods Namespace Pods Get
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /namespace/pods/{name}:
+    get:
+      tags:
+      - namespace
+      summary: Posture for a specific pod by name
+      operationId: namespace_pod_namespace_pods__name__get
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodPosture'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /namespace/configmaps:
+    get:
+      tags:
+      - namespace
+      summary: ConfigMap metadata in this namespace
+      operationId: namespace_configmaps_namespace_configmaps_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ConfigMapMeta'
+                type: array
+                title: Response Namespace Configmaps Namespace Configmaps Get
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /namespace/secrets:
+    get:
+      tags:
+      - namespace
+      summary: Secret metadata (values never returned). 404 when secret listing is
+        disabled.
+      operationId: namespace_secrets_namespace_secrets_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SecretMeta'
+                type: array
+                title: Response Namespace Secrets Namespace Secrets Get
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    AccessReviewResult:
+      properties:
+        verb:
+          type: string
+          title: Verb
+        resource:
+          type: string
+          title: Resource
+        subresource:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subresource
+        namespace:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Namespace
+        allowed:
+          type: boolean
+          title: Allowed
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+      type: object
+      required:
+      - verb
+      - resource
+      - allowed
+      title: AccessReviewResult
+    ConfigMapMeta:
+      properties:
+        name:
+          type: string
+          title: Name
+        keys:
+          items:
+            type: string
+          type: array
+          title: Keys
+      type: object
+      required:
+      - name
+      title: ConfigMapMeta
+    CredentialInventory:
+      properties:
+        gcp:
+          $ref: '#/components/schemas/GcpMetadataInventory'
+        k8s:
+          $ref: '#/components/schemas/K8sCredentialInventory'
+      type: object
+      required:
+      - gcp
+      - k8s
+      title: CredentialInventory
+    Finding:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - K8S-SECRETS-READ
+        severity:
+          $ref: '#/components/schemas/Severity'
+        title:
+          type: string
+          title: Title
+        detail:
+          type: string
+          title: Detail
+        remediation:
+          type: string
+          title: Remediation
+        evidence:
+          additionalProperties: true
+          type: object
+          title: Evidence
+      type: object
+      required:
+      - id
+      - severity
+      - title
+      - detail
+      - remediation
+      title: Finding
+    FindingList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Finding'
+          type: array
+          title: Items
+      type: object
+      title: FindingList
+    GcpAccessToken:
+      properties:
+        service_account:
+          type: string
+          title: Service Account
+          examples:
+          - default
+        email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Email
+          examples:
+          - sa@project.iam.gserviceaccount.com
+        scopes:
+          items:
+            type: string
+          type: array
+          title: Scopes
+        expires_in:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Expires In
+          examples:
+          - 3599
+        redaction:
+          $ref: '#/components/schemas/TokenRedaction'
+      type: object
+      required:
+      - service_account
+      - redaction
+      title: GcpAccessToken
+    GcpIdentityToken:
+      properties:
+        service_account:
+          type: string
+          title: Service Account
+        audience:
+          type: string
+          title: Audience
+        redaction:
+          $ref: '#/components/schemas/TokenRedaction'
+        claims:
+          $ref: '#/components/schemas/JwtClaims'
+      type: object
+      required:
+      - service_account
+      - audience
+      - redaction
+      - claims
+      title: GcpIdentityToken
+    GcpInstance:
+      properties:
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+        numeric_project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Numeric Project Id
+        instance_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Instance Id
+        instance_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Instance Name
+        zone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Zone
+        machine_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Machine Type
+        hostname:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hostname
+        attribute_keys:
+          items:
+            type: string
+          type: array
+          title: Attribute Keys
+        legacy_metadata_reachable:
+          type: boolean
+          title: Legacy Metadata Reachable
+          description: True when /computeMetadata/v1beta1/* responds without Metadata-Flavor
+            (workload identity not enforced).
+          default: false
+      type: object
+      title: GcpInstance
+    GcpMetadataInventory:
+      properties:
+        instance:
+          $ref: '#/components/schemas/GcpInstance'
+        service_accounts:
+          items:
+            type: string
+          type: array
+          title: Service Accounts
+        access_tokens:
+          items:
+            $ref: '#/components/schemas/GcpAccessToken'
+          type: array
+          title: Access Tokens
+        identity_tokens:
+          items:
+            $ref: '#/components/schemas/GcpIdentityToken'
+          type: array
+          title: Identity Tokens
+      type: object
+      required:
+      - instance
+      title: GcpMetadataInventory
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    JwtClaims:
+      properties:
+        header:
+          additionalProperties: true
+          type: object
+          title: Header
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+      type: object
+      title: JwtClaims
+    K8sCredentialInventory:
+      properties:
+        projected_token:
+          anyOf:
+          - $ref: '#/components/schemas/ProjectedSaToken'
+          - type: 'null'
+        ca_present:
+          type: boolean
+          title: Ca Present
+          default: false
+        mounted_secret_files:
+          items:
+            $ref: '#/components/schemas/MountedSecretFile'
+          type: array
+          title: Mounted Secret Files
+      type: object
+      title: K8sCredentialInventory
+    MetadataValue:
+      properties:
+        path:
+          type: string
+          title: Path
+        is_sensitive_path:
+          type: boolean
+          title: Is Sensitive Path
+          default: false
+        redacted:
+          type: boolean
+          title: Redacted
+          default: false
+        value:
+          anyOf:
+          - {}
+          - type: 'null'
+          title: Value
+        redaction:
+          anyOf:
+          - $ref: '#/components/schemas/TokenRedaction'
+          - type: 'null'
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+      type: object
+      required:
+      - path
+      title: MetadataValue
+      description: Result of a structured `describe_metadata` call. Auto-redacted.
+    MountedSecretFile:
+      properties:
+        path:
+          type: string
+          title: Path
+        size:
+          type: integer
+          title: Size
+        sha256_prefix:
+          type: string
+          title: Sha256 Prefix
+        kind:
+          type: string
+          enum:
+          - jwt
+          - pem-private-key
+          - kubeconfig
+          - opaque
+          title: Kind
+          default: opaque
+      type: object
+      required:
+      - path
+      - size
+      - sha256_prefix
+      title: MountedSecretFile
+    NamespacePosture:
+      properties:
+        namespace:
+          type: string
+          title: Namespace
+        pods:
+          items:
+            $ref: '#/components/schemas/PodPosture'
+          type: array
+          title: Pods
+        configmaps:
+          items:
+            $ref: '#/components/schemas/ConfigMapMeta'
+          type: array
+          title: Configmaps
+        secrets:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/SecretMeta'
+            type: array
+          - type: 'null'
+          title: Secrets
+          description: Populated only when AUDIT_ENABLE_SECRET_LISTING is true. Values
+            are never returned.
+        secret_listing_enabled:
+          type: boolean
+          title: Secret Listing Enabled
+          default: false
+      type: object
+      required:
+      - namespace
+      title: NamespacePosture
+    PodPosture:
+      properties:
+        namespace:
+          type: string
+          title: Namespace
+        name:
+          type: string
+          title: Name
+        service_account:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Service Account
+        automount_service_account_token:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Automount Service Account Token
+        secret_volumes:
+          items:
+            type: string
+          type: array
+          title: Secret Volumes
+        configmap_volumes:
+          items:
+            type: string
+          type: array
+          title: Configmap Volumes
+        privileged:
+          type: boolean
+          title: Privileged
+          default: false
+        host_pid:
+          type: boolean
+          title: Host Pid
+          default: false
+        host_network:
+          type: boolean
+          title: Host Network
+          default: false
+        host_ipc:
+          type: boolean
+          title: Host Ipc
+          default: false
+        allow_privilege_escalation:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Allow Privilege Escalation
+        risk_tags:
+          items:
+            type: string
+          type: array
+          title: Risk Tags
+      type: object
+      required:
+      - namespace
+      - name
+      title: PodPosture
+    Problem:
+      properties:
+        type:
+          type: string
+          title: Type
+          default: about:blank
+          examples:
+          - about:blank
+        title:
+          type: string
+          title: Title
+          examples:
+          - Not Found
+        status:
+          type: integer
+          title: Status
+          examples:
+          - 404
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+          examples:
+          - resource not found
+        instance:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Instance
+          examples:
+          - /findings/missing
+      type: object
+      required:
+      - title
+      - status
+      title: Problem
+      description: RFC 7807 problem details.
+    ProjectedSaToken:
+      properties:
+        namespace:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Namespace
+        redaction:
+          $ref: '#/components/schemas/TokenRedaction'
+        claims:
+          $ref: '#/components/schemas/JwtClaims'
+      type: object
+      required:
+      - redaction
+      - claims
+      title: ProjectedSaToken
+    RbacReport:
+      properties:
+        rules:
+          $ref: '#/components/schemas/RulesReviewResult'
+        curated:
+          items:
+            $ref: '#/components/schemas/AccessReviewResult'
+          type: array
+          title: Curated
+      type: object
+      required:
+      - rules
+      title: RbacReport
+    RbacRule:
+      properties:
+        verbs:
+          items:
+            type: string
+          type: array
+          title: Verbs
+        api_groups:
+          items:
+            type: string
+          type: array
+          title: Api Groups
+        resources:
+          items:
+            type: string
+          type: array
+          title: Resources
+        resource_names:
+          items:
+            type: string
+          type: array
+          title: Resource Names
+        non_resource_urls:
+          items:
+            type: string
+          type: array
+          title: Non Resource Urls
+      type: object
+      title: RbacRule
+    Report:
+      properties:
+        raw_reveal_enabled:
+          type: boolean
+          title: Raw Reveal Enabled
+          default: false
+        deployment:
+          type: string
+          title: Deployment
+          default: natoma
+        auth:
+          type: string
+          title: Auth
+          default: none (gateway-managed)
+        secret_listing_enabled:
+          type: boolean
+          title: Secret Listing Enabled
+          default: false
+        credentials:
+          $ref: '#/components/schemas/CredentialInventory'
+        rbac:
+          $ref: '#/components/schemas/RbacReport'
+        findings:
+          $ref: '#/components/schemas/FindingList'
+        namespace:
+          anyOf:
+          - $ref: '#/components/schemas/NamespacePosture'
+          - type: 'null'
+      type: object
+      required:
+      - credentials
+      - rbac
+      - findings
+      title: Report
+    RulesReviewResult:
+      properties:
+        namespace:
+          type: string
+          title: Namespace
+        incomplete:
+          type: boolean
+          title: Incomplete
+          default: false
+        resource_rules:
+          items:
+            $ref: '#/components/schemas/RbacRule'
+          type: array
+          title: Resource Rules
+        non_resource_rules:
+          items:
+            $ref: '#/components/schemas/RbacRule'
+          type: array
+          title: Non Resource Rules
+      type: object
+      required:
+      - namespace
+      title: RulesReviewResult
+    SecretKeyMeta:
+      properties:
+        name:
+          type: string
+          title: Name
+          description: Key name inside the Secret data map.
+        size:
+          type: integer
+          title: Size
+          description: Length of the decoded value in bytes.
+        sha256_prefix:
+          type: string
+          title: Sha256 Prefix
+          description: First 16 hex chars of SHA-256 of the decoded value.
+      type: object
+      required:
+      - name
+      - size
+      - sha256_prefix
+      title: SecretKeyMeta
+    SecretMeta:
+      properties:
+        name:
+          type: string
+          title: Name
+        type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Type
+        keys:
+          items:
+            $ref: '#/components/schemas/SecretKeyMeta'
+          type: array
+          title: Keys
+      type: object
+      required:
+      - name
+      title: SecretMeta
+    ServerInfo:
+      properties:
+        name:
+          type: string
+          title: Name
+          default: gke-cred-audit
+        version:
+          type: string
+          title: Version
+        deployment:
+          type: string
+          title: Deployment
+          default: natoma
+        auth:
+          type: string
+          title: Auth
+          default: none (gateway-managed)
+        raw_reveal_enabled:
+          type: boolean
+          title: Raw Reveal Enabled
+          default: false
+        secret_listing_enabled:
+          type: boolean
+          title: Secret Listing Enabled
+          default: false
+        tools:
+          items:
+            $ref: '#/components/schemas/ServerInfoTool'
+          type: array
+          title: Tools
+        resources:
+          items:
+            $ref: '#/components/schemas/ServerInfoResource'
+          type: array
+          title: Resources
+      type: object
+      required:
+      - version
+      title: ServerInfo
+    ServerInfoResource:
+      properties:
+        uri:
+          type: string
+          title: Uri
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      required:
+      - uri
+      title: ServerInfoResource
+    ServerInfoTool:
+      properties:
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      required:
+      - name
+      title: ServerInfoTool
+    Severity:
+      type: string
+      enum:
+      - CRITICAL
+      - HIGH
+      - MEDIUM
+      - LOW
+      - INFO
+      title: Severity
+    TokenRedaction:
+      properties:
+        kind:
+          type: string
+          enum:
+          - jwt
+          - opaque
+          title: Kind
+          examples:
+          - jwt
+        length:
+          type: integer
+          title: Length
+          examples:
+          - 1024
+        sha256_prefix:
+          type: string
+          title: Sha256 Prefix
+          description: First 16 hex chars of SHA-256.
+          examples:
+          - ab12cd34ef567890
+      type: object
+      required:
+      - kind
+      - length
+      - sha256_prefix
+      title: TokenRedaction
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+servers:
+- url: http://gke-cred-audit:8787
+x-deployment: natoma
+x-auth: none (gateway-managed)
+tags:
+- name: health
+  description: Liveness, readiness, and server-info.
+- name: report
+  description: Full inventory and per-section reads.
+- name: findings
+  description: Severity-tagged remediation items.
+- name: metadata
+  description: Read GCE metadata service paths (auto-redacted).
+- name: namespace
+  description: Pods/ConfigMaps/Secrets metadata in this pod's namespace.

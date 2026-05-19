@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gke-cred-audit
+  labels:
+    app.kubernetes.io/name: gke-cred-audit
+---
+# Self-introspection: SelfSubjectRulesReview / SelfSubjectAccessReview.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gke-cred-audit-self-review
+rules:
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["selfsubjectrulesreviews", "selfsubjectaccessreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gke-cred-audit-self-review
+subjects:
+  - kind: ServiceAccount
+    name: gke-cred-audit
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: gke-cred-audit-self-review
+  apiGroup: rbac.authorization.k8s.io
+---
+# Namespace-scoped read of pods + configmaps.
+# Secrets is INTENTIONALLY commented out. Granting secrets:list to this SA
+# expands blast radius even though the server never returns Secret values.
+# Uncomment ONLY if you also set AUDIT_ENABLE_SECRET_LISTING=true on the
+# Deployment, and prefer to scope by `resourceNames` if possible.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gke-cred-audit-ns-read
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  # - apiGroups: [""]
+  #   resources: ["secrets"]
+  #   verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gke-cred-audit-ns-read
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: gke-cred-audit
+    namespace: default
+roleRef:
+  kind: Role
+  name: gke-cred-audit-ns-read
+  apiGroup: rbac.authorization.k8s.io

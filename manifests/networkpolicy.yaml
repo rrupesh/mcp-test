@@ -1,0 +1,45 @@
+# Restricts the audit server's network surface:
+#   - Ingress allowed only from the Natoma gateway namespace.
+#   - Egress to kube-apiserver and the GCE metadata IP only.
+# Adjust the namespaceSelector / podSelector to match how your Natoma
+# installation labels its gateway namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gke-cred-audit
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gke-cred-audit
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              natoma-gateway: "true"
+      ports:
+        - port: 8787
+          protocol: TCP
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 169.254.169.254/32
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-apiserver
+      ports:
+        - port: 443
+          protocol: TCP
+    # DNS for kubernetes.default.svc resolution.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

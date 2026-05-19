@@ -1,0 +1,53 @@
+# Deployment for gke-cred-audit MCP server. Natoma fronts /mcp.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gke-cred-audit
+  labels:
+    app.kubernetes.io/name: gke-cred-audit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gke-cred-audit
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gke-cred-audit
+    spec:
+      serviceAccountName: gke-cred-audit
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: audit
+          image: ghcr.io/your-org/gke-cred-audit:0.1.0
+          args: ["--bind", "0.0.0.0", "--port", "8787"]
+          env:
+            - name: AUDIT_RAW_REVEAL
+              value: "false"
+            - name: AUDIT_ENABLE_SECRET_LISTING
+              value: "false"
+          ports:
+            - containerPort: 8787
+              name: audit
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8787
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8787
+          resources:
+            requests: { cpu: "20m", memory: "96Mi" }
+            limits:   { cpu: "200m", memory: "256Mi" }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
